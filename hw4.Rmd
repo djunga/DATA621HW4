@@ -1,0 +1,20 @@
+---
+title: "hw4"
+author: "Group 4"
+date: '2022-11-10'
+output: html_document
+---
+
+```{r, echo=FALSE}
+library(tidyverse)
+```
+
+```{r}
+insurance.train <- read.csv('https://raw.githubusercontent.com/djunga/DATA621HW4/main/insurance_train.csv')
+insurance.eval <- read.csv('https://raw.githubusercontent.com/djunga/DATA621HW4/main/insurance_eval.csv')
+```
+
+```{r}
+head(insurance.train)
+```
+
