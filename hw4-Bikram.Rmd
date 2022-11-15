@@ -1,0 +1,164 @@
+---
+title: "hw4"
+author: "Group 4"
+date: '2022-11-10'
+output: html_document
+---
+
+```{r, echo=FALSE}
+library(tidyverse)
+library(dplyr)
+
+```
+
+```{r}
+insurance.train <- read.csv('https://raw.githubusercontent.com/djunga/DATA621HW4/main/insurance_train.csv')
+insurance.eval <- read.csv('https://raw.githubusercontent.com/djunga/DATA621HW4/main/insurance_eval.csv')
+```
+
+```{r}
+head(insurance.train)
+```
+
+### Removing unwanted chars "Z_" from all columns
+```{r}
+
+insurance.train[] <- Map(gsub, "^z_", "", insurance.train)
+
+head(insurance.train)
+
+```
+
+### Identify columns with missing values. Count number of 'na' in columns
+```{r}
+colSums(is.na(insurance.train))                 # Count missing values
+```
+
+### Summarize the data
+```{r}
+summary(insurance.train)
+```
+
+### All the columns are of String type. Convert the relevant one to numeric
+
+```{r}
+ins_train <- transform(insurance.train, INDEX = as.numeric(INDEX),
+                       TARGET_FLAG = as.numeric(TARGET_FLAG), 
+                    TARGET_AMT = as.numeric(TARGET_AMT), KIDSDRIV = as.numeric(KIDSDRIV), AGE= as.numeric(AGE), HOMEKIDS= as.numeric(HOMEKIDS),
+                    YOJ = as.numeric(YOJ), TIF = as.numeric(TIF), CLM_FREQ = as.numeric(CLM_FREQ), MVR_PTS = as.numeric(MVR_PTS), CAR_AGE = as.numeric(CAR_AGE) 
+                    )
+
+summary(ins_train)
+head(ins_train)
+```
+
+## Variation in data
+
+### Visualizing distribution
+
+```{r}
+ggplot(ins_train) + 
+  geom_bar(mapping = aes(x = TARGET_FLAG))
+```
+
+
+### Let's see the distribution based on the vehicle type
+```{r}
+ggplot(data = ins_train) +
+  geom_bar(mapping = aes(x = CAR_TYPE))
+```
+
+
+### Let's see the distribution based on the vehicle's age
+
+```{r}
+ggplot(data = ins_train) +
+  geom_bar(mapping = aes(x = CAR_AGE))
+```
+
+### Let's see the distribution based on the driver's age
+```{r}
+ggplot(data = ins_train) +
+  geom_bar(mapping = aes(x = AGE))
+```
+
+### Plotting Age of the driver by Target amount
+
+```{r}
+ggplot(data = ins_train, mapping = aes(x = AGE, y = TARGET_AMT)) + 
+  geom_point()
+```
+
+
+### Plotting Age of the driver by Target flag
+
+```{r}
+ggplot(data = ins_train, mapping = aes(x = AGE, y = TARGET_FLAG)) + 
+  geom_point()
+```
+
+
+
+### I found CAR_AGE to be an interesting attribute. Let's try to dig deeper into that subset
+
+```{r}
+
+ins_train <- ins_train %>% 
+  mutate(NEW_CAR = ifelse(CAR_AGE < 6, 1, 0))
+```
+
+
+### Subset NEW_CAR data
+```{r}
+new_car_dataset <- filter(ins_train, NEW_CAR==1)
+old_car_dataset <- filter(ins_train, NEW_CAR==0)
+
+```
+
+
+### Plotting Age of the driver by Target amount with new cars
+
+```{r}
+ggplot(new_car_dataset) + 
+  geom_bar(mapping = aes(x = TARGET_FLAG))
+
+ggplot(old_car_dataset) + 
+  geom_bar(mapping = aes(x = TARGET_FLAG))
+
+
+ggplot(data = new_car_dataset, mapping = aes(x = AGE, y = TARGET_AMT)) + 
+  geom_point()
+
+ggplot(data = old_car_dataset, mapping = aes(x = AGE, y = TARGET_AMT)) + 
+  geom_point()
+
+```
+
+### Please note that the percentage of new car getting into a crash is much greater than an older car having an accident, irrespective of the driver's age 
+
+```{r}
+
+ggplot(data = ins_train, mapping = aes(x = CAR_TYPE, y = TARGET_FLAG)) + 
+  geom_point()
+
+```
+
+### Subsetting the dataset with all crash vehicles
+```{r}
+
+crash_car_dataset <- filter(ins_train, TARGET_FLAG==1)
+
+ggplot(data = crash_car_dataset, mapping = aes(x =  reorder(CAR_TYPE, TARGET_AMT, FUN = median), y = TARGET_AMT)) +
+  geom_boxplot()
+
+```
+
+### Covariation between CarType & Target Amount
+
+```{r}
+ggplot(data = crash_car_dataset, mapping = aes(x = TARGET_AMT)) + 
+  geom_freqpoly(mapping = aes(colour = CAR_TYPE), binwidth = 10000)
+```
+
+
+
