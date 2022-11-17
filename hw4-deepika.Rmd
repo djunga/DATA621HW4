@@ -28,7 +28,7 @@ library(magrittr)
 library(betareg)
 library(pscl)
 library(gtsummary)
-
+library(nnet)
 ```
 
 ```{r}
@@ -205,6 +205,46 @@ ggplot(aes(x = predict), data = model_predictions) + geom_histogram() + facet_wr
 ```
 
 
+
+## Model 5: Linear Discriminant Analysis (LDA), Manual Variable Selection
+
+We are building model that can predict the probability that a person will crash their car. The variables in this model are manually selected:
+- AGE
+- REVOKED
+- MVR_PTS
+
+We theorize that these variables are positively related to the driver's personal accountability. In other words, a driver who positively associated with these variables is theorized to be more prone to crashing their car.
+```{r}
+mmod <- multinom(TARGET_FLAG ~ AGE + REVOKED + MVR_PTS, data=insurance.train %>% select(-c("TARGET_AMT", "INDEX")))
+mmod
+```
+
+
+```{r}
+mlda <- lda(TARGET_FLAG ~ AGE + REVOKED + MVR_PTS, data=insurance.train %>% select(-c("TARGET_AMT", "INDEX")))
+mlda
+```
+
+```{r}
+preds <- predict(mlda)
+head(preds$posterior)
+```
+
+```{r}
+length(predict(mlda)$class)
+
+
+insurance.train %>% select(-c("TARGET_AMT", "INDEX"))
+```
+
+
+
+```{r}
+xtabs( ~ predict(mlda)$class + insurance.train$TARGET_FLAG %>% na.omit())
+```
+
+
+
 # Appendix -----
 
 
@@ -228,7 +268,7 @@ library(magrittr)
 library(betareg)
 library(pscl)
 library(gtsummary)
-
+library(nnet)
 
 
 ## ---------------------------------------------------------------------------------------------------------------
