@@ -150,7 +150,7 @@ The R2 takes a hit (0.07 to 0.04), but this might a better model: more observati
 
 ## Model 3: Log Transformation
 
-We know from previous plots that the target amount is heavilty skewed right. Therefore, we can log-transform it and normalize the outcome:
+We know from previous plots that the target amount is heavily skewed right. Therefore, we can log-transform it and normalize the outcome:
 
 ```{r}
 
@@ -210,37 +210,30 @@ ggplot(aes(x = predict), data = model_predictions) + geom_histogram() + facet_wr
 
 We are building model that can predict the probability that a person will crash their car. The variables in this model are manually selected:
 - AGE
+- CLM_FREQ
+- JOB
 - REVOKED
 - MVR_PTS
+- MSTATUS
+- CAR_TYPE
 
 We theorize that these variables are positively related to the driver's personal accountability. In other words, a driver who positively associated with these variables is theorized to be more prone to crashing their car.
+
 ```{r}
-mmod <- multinom(TARGET_FLAG ~ AGE + REVOKED + MVR_PTS, data=insurance.train %>% select(-c("TARGET_AMT", "INDEX")))
-mmod
+train.df <- insurance.train %>% select(-c("TARGET_AMT", "INDEX", "logTARGET_AMT"))
+mlda <- lda(TARGET_FLAG ~ AGE + CLM_FREQ +JOB+ REVOKED+MVR_PTS + MSTATUS + CAR_TYPE , data=train.df)
+
+lda_predict <- predict(mlda, newdata=select(train.df, -"TARGET_FLAG"))$class
+table(lda_predict, train.df[,1])
 ```
 
-
+### Accuracy:
 ```{r}
-mlda <- lda(TARGET_FLAG ~ AGE + REVOKED + MVR_PTS, data=insurance.train %>% select(-c("TARGET_AMT", "INDEX")))
-mlda
+mean(lda_predict==train.df[,1], na.rm=TRUE)
 ```
-
 ```{r}
-preds <- predict(mlda)
-head(preds$posterior)
-```
-
-```{r}
-length(predict(mlda)$class)
-
-
-insurance.train %>% select(-c("TARGET_AMT", "INDEX"))
-```
-
-
-
-```{r}
-xtabs( ~ predict(mlda)$class + insurance.train$TARGET_FLAG %>% na.omit())
+conf <- table(list(predicted=lda_predict, observed=train.df[,1]))
+confusionMatrix(conf)
 ```
 
 
