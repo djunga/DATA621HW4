@@ -236,7 +236,19 @@ conf <- table(list(predicted=lda_predict, observed=train.df[,1]))
 confusionMatrix(conf)
 ```
 
+## Model 6: Logistic Regression
 
+```{r}
+mlog <- glm(TARGET_FLAG ~ ., family="binomial", data=train.df)
+tidy(mlog)
+```
+Predict
+```{r}
+log_predict <- predict(mlog, newdata=train.df)
+```
+
+
+ 
 
 # Appendix -----
 
