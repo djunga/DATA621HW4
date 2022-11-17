@@ -8,7 +8,7 @@ output: html_document
 ```{r, echo=FALSE}
 library(tidyverse)
 library(dplyr)
-library(faraway)
+#library(faraway)
 ```
 
 ```{r}
