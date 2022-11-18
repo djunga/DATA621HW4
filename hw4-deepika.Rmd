@@ -247,8 +247,46 @@ Predict
 log_predict <- predict(mlog, newdata=train.df)
 ```
 
+## Deepa
 
+## Model 7: Binary Logistic Regression
+
+```{r}
+# preliminary exploration with one predictor
+model7 <- glm(formula = TARGET_FLAG ~ AGE, family = binomial(), data = insurance.train)
+summary(model7)
+```
  
+AIC value is pretty high. Let's create another model with more variables.
+## Model 8: Binary Logistic Regression Model with more variables.
+ 
+ 
+```{r}
+Binary_Model8 = glm(TARGET_FLAG ~ AGE +
+                  CAR_AGE +
+                  MVR_PTS +
+                  YOJ +
+                  CLM_FREQ +
+                  TIF, family = binomial(), data = insurance.train)
+summary(Binary_Model8)
+``` 
+ This model looks better with lower AIC value than Model 7.
+ 
+ ## Model 9: Multiple Linear Regression
+
+ ## Multiple Linear Regression models with selected variables.
+
+```{r}
+MLR_Model = lm(TARGET_AMT ~ AGE +
+                  CAR_AGE +
+                  MVR_PTS +
+                  YOJ +
+                  CLM_FREQ +
+                  TIF, data = insurance.train)
+summary(MLR_Model)
+```
+F-statistic: 36.02 and  p-value: < 2.2e-16. 
+
 
 # Appendix -----
 
