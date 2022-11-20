@@ -60,6 +60,9 @@ insurance.all = insurance.all %>% mutate(CAR_AGE = as.numeric(CAR_AGE), AGE = as
 insurance.all = insurance.all %>% mutate(INDEX = as.integer(INDEX), TARGET_FLAG = as.factor(TARGET_FLAG), PARENT1 = as.factor(PARENT1), MSTATUS = as.factor(MSTATUS), SEX = as.factor(SEX), EDUCATION = as.factor(EDUCATION), JOB = as.factor(JOB),CAR_USE = as.factor(CAR_USE), CAR_TYPE = as.factor(CAR_TYPE),  RED_CAR = as.factor(RED_CAR), REVOKED = as.factor(REVOKED), URBANICITY = as.factor(URBANICITY))
 
 insurance.train = insurance.all %>% filter(dataset == "train") %>% select(-"dataset")
+#insurance.all
+insurance.test = insurance.all %>% filter(dataset == "eval") %>% select(-"dataset")
+#insurance.test
 ```
 
 
@@ -177,7 +180,7 @@ fit.control <- trainControl(method = "repeatedcv", number = 5, repeats = 10)
 cv_fit <- train(logTARGET_AMT ~  SEX + BLUEBOOK + EDUCATION + CAR_TYPE + REVOKED + MVR_PTS + CAR_AGE, data = insurance.train.complete, method = "glm",  family = "gaussian", trControl = fit.control)
 
 cv_fit$results %>% knitr::kable()
- 
+ summary(cv_fit)
 ```
 
 The R-Squared here is 0.1, but it might perform better due to cross-validation.
@@ -185,15 +188,15 @@ The R-Squared here is 0.1, but it might perform better due to cross-validation.
 
 
 
-# Evaluating Linear Regression Models
+## Evaluating Linear Regression Models
 
 ```{r}
 insurance.eval = insurance.all %>% filter(dataset == "eval") %>% select(-"dataset")
 
 eval.model1.glm = predict(GLM.model1)
 eval.model2.glm = predict(GLM.model2, select(insurance.eval, -"TARGET_AMT"))
-eval.model3.glm = 10^predict(GLM.model3, select(insurance.eval, -"TARGET_AMT"))
-eval.model4.glm = 10^predict(cv_fit, newdata = select(insurance.eval, -"TARGET_AMT"))
+eval.model3.glm = 10**predict(GLM.model3, select(insurance.eval, -"TARGET_AMT"))
+eval.model4.glm = 10**predict(cv_fit, newdata = select(insurance.eval, -"TARGET_AMT"))
 
 model_predictions = rbind(data.frame(name = "Model1", predict = eval.model1.glm),
 data.frame(name = "Model2", predict = eval.model2.glm),
@@ -203,7 +206,7 @@ data.frame(name = "CV", predict = eval.model4.glm))
 
 ggplot(aes(x = predict), data = model_predictions) + geom_histogram() + facet_wrap(~name) + labs(x = "Income", y = "Count", title = "Predicted Values")
 ```
-
+# Predicting likelyhood of being in an accident
 
 
 ## Model 5: Linear Discriminant Analysis (LDA), Manual Variable Selection
@@ -227,39 +230,30 @@ lda_predict <- predict(mlda, newdata=select(train.df, -"TARGET_FLAG"))$class
 table(lda_predict, train.df[,1])
 ```
 
-### Accuracy:
-```{r}
-mean(lda_predict==train.df[,1], na.rm=TRUE)
-```
 ```{r}
 conf <- table(list(predicted=lda_predict, observed=train.df[,1]))
-confusionMatrix(conf)
+confusionMatrix(conf,,mode="everything")
 ```
 
 ## Model 6: Logistic Regression
 
+we first check how effective a logistic regression is including all variables to see what direction to go and what variables to remove.
+
 ```{r}
 mlog <- glm(TARGET_FLAG ~ ., family="binomial", data=train.df)
-tidy(mlog)
-```
-Predict
-```{r}
-log_predict <- predict(mlog, newdata=train.df)
+
+predict_mlog <- round(predict(mlog, train.df, type="response"))
+
+conf_mlog <- confusionMatrix(data=as.factor(predict_mlog),reference=as.factor(train.df$TARGET_FLAG),mode="everything")
+
+conf_mlog
+
+
 ```
 
-## Deepa
-
-## Model 7: Binary Logistic Regression
-
-```{r}
-# preliminary exploration with one predictor
-model7 <- glm(formula = TARGET_FLAG ~ AGE, family = binomial(), data = insurance.train)
-summary(model7)
-```
+## Model 7: Binary Logistic Regression with select variables.
  
-AIC value is pretty high. Let's create another model with more variables.
-## Model 8: Binary Logistic Regression Model with more variables.
- 
+this model takes model six and restricts the variables to try and improve upon the general binomial regression. 
  
 ```{r}
 Binary_Model8 = glm(TARGET_FLAG ~ AGE +
@@ -267,25 +261,36 @@ Binary_Model8 = glm(TARGET_FLAG ~ AGE +
                   MVR_PTS +
                   YOJ +
                   CLM_FREQ +
-                  TIF, family = binomial(), data = insurance.train)
-summary(Binary_Model8)
-``` 
- This model looks better with lower AIC value than Model 7.
- 
- ## Model 9: Multiple Linear Regression
+                  TIF, family = "binomial", data = train.df)
+#summary(Binary_Model8)
 
- ## Multiple Linear Regression models with selected variables.
+predict_model8 <- round(predict(Binary_Model8, train.df, type="response"))
+
+conf_mod_8 <- confusionMatrix(data=as.factor(predict_model8),reference=as.factor(train.df$TARGET_FLAG),mode="everything")
+
+conf_mod_8
+
+
+```
+# Model Evaluation
+
+## Linear cost prediction.
+
+Altogether the linear models struggled to model the data well. this is best seen with the R^2 values for all four linear models the highest was only 0.1 while most were around 0.07 showing that the model could only account for about 10% of the variance. The best performing models were the log transformed model(model 3) and the model using cross validation(CV). all models showed statistically relevant p values all below 0.001.With both the CV model and log transformed model showing good and almost identical R^2 values The AIC value is probably the best metric for determining the best model. The log transformed model shows an AIC around 55K while the cv model has an AIC of ~44k. This means the CV model is the best fitting model for the data.  
+
+## Likelyhood of getting into an accident models
+ 
+Like in our linear models it was a bit difficult to get a good working model for predicting whether or not a customer is likely to file an insurance claim. we took three approaches to this, starting with all variables in a binomial regression, a binomial selecting some of the more statistically relevant predictors, and by using LDA analysis. Across all three models there is an accuracy that sits around 75% however the main way where the models differentiate each other is in the specificity and sensitivity. Both the LDA analysis and the selective logistic model show sensitivity is very good at .93 and .95 respectively with the unrestricted model at .92. however all models are marked with very low specificity which sets each model apart. Although all models do not show high specificity the non restricted log model has the highest rating in this category at .43 as compared to .27(LDA) and .15(selective). this means that all of these models have a high rate of false positives. Altogether taking these metrics in mind it is clear that the best model is the logistic model containing all variables. Although it is not as accurate or sensitive It makes up for this by doubling or more than doubling the specificity of its predictions. 
+
+
+## generating prediction DF
 
 ```{r}
-MLR_Model = lm(TARGET_AMT ~ AGE +
-                  CAR_AGE +
-                  MVR_PTS +
-                  YOJ +
-                  CLM_FREQ +
-                  TIF, data = insurance.train)
-summary(MLR_Model)
+insurance.test
+#insurance.test$predicted_flag<- predict(mlog, insurance.test, type="response")
+#insurance.test$predicted_amnt<-10^predict(cv_fit, newdata=insurance.test)
+write_csv(insurance.test,"HW4_predictions.csv")
 ```
-F-statistic: 36.02 and  p-value: < 2.2e-16. 
 
 
 # Appendix -----
