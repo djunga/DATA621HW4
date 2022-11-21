@@ -477,7 +477,7 @@ conf_mod_8 <- confusionMatrix(data=as.factor(predict_model8),reference=as.factor
 conf_mod_8
 ## ---------------------------------------------------------------------------------------------------------------
 
-insurance.test = insurance.test %>% select(-c("TARGET_AMT", "TARGET_FLAG")) %>%  na.omit()
+#insurance.test = insurance.test %>% select(-c("TARGET_AMT", "TARGET_FLAG")) %>%  na.omit()
 
 insurance.test$predicted_flag<- round(predict(mlog, insurance.test, type="response"))
 insurance.test$predicted_amnt<-10**(predict(cv_fit, newdata=insurance.test))
