@@ -31,7 +31,7 @@ library(gtsummary)
 library(nnet)
 ```
 
-```{r}
+```{r, echo=FALSE}
 insurance.train <- read.csv('https://raw.githubusercontent.com/djunga/DATA621HW4/main/insurance_train.csv')
 insurance.eval <- read.csv('https://raw.githubusercontent.com/djunga/DATA621HW4/main/insurance_eval.csv')
 
@@ -43,7 +43,7 @@ insurance.all = rbind(data.frame(insurance.train, dataset = "train"), data.frame
 
 Prior to data analysis, we'll need to clean the dataset and convert variables to accurate classes. We can convert home valuation, bluebook values, and income to numeric variables while designating other variables as categorical:
 
-```{r}
+```{r, echo=FALSE}
 insurance.all = sapply(insurance.all, function(x) x = gsub("z\\_|\\<|<", "", x)) %>% as.data.frame()
 insurance.all = sapply(insurance.all, function(x) x = ifelse(x == "", NA, x)) %>% as.data.frame()
 
@@ -68,13 +68,13 @@ insurance.test = insurance.all %>% filter(dataset == "eval") %>% select(-"datase
 
 First, we'll create a correlation plot to visualize the associations between variables:
 
-```{r}
+```{r, echo=FALSE}
 corrplot(cor( select_if(insurance.train, is.numeric), use = "complete.obs"), tl.col="black", tl.cex=0.6, order='AOE')
 ```
 
 ## Visualizing Linearity:
 
-```{r}
+```{r, echo=FALSE}
 
 mlt.train = insurance.train  %>% select_if(is.numeric) 
 mlt.train = melt(mlt.train, id.vars = c("INDEX", "TARGET_AMT"))
@@ -86,7 +86,7 @@ ggplot(aes(value, TARGET_AMT), data = mlt.train) + geom_point() + facet_wrap(~va
 
 We can make some histograms to analyze distributions:
 
-```{r}
+```{r, echo=FALSE}
 
 mlt.train = insurance.train  %>% select_if(is.numeric) 
 mlt.train = melt(mlt.train, id.vars = "INDEX")
@@ -98,7 +98,7 @@ ggplot(aes(value), data = mlt.train) + geom_histogram(stat = "bin", fill = "navy
 
 To analyze data distribution, we can make a couple of bar plots:
 
-```{r}
+```{r, echo=FALSE}
 
 mlt.train = insurance.train  %>% select_if(is.factor) 
 mlt.train = cbind(mlt.train, select(insurance.train, INDEX))
@@ -111,7 +111,7 @@ ggplot(aes(value, n), data = mlt.train) + geom_bar(stat = "identity", fill = "na
 
 And lastly, we can take a look at missing data:
 
-```{r}
+```{r, echo=FALSE}
 
 mlt.train = insurance.train 
 mlt.train = melt(mlt.train, id.vars = "INDEX") %>% filter(is.na(value)) %>% group_by(variable) %>% summarise(n = n())
@@ -134,7 +134,7 @@ ggplot(aes(reorder(variable, -n), n), data =mlt.train ) + geom_bar(stat = "ident
 
 We can start by creating a model where we utilize all predictors in the dataset. Ideally, this will give us a sense of what the leading contributors are towards the model:
 
-```{r}
+```{r, echo=FALSE}
 GLM.model1 = lm(TARGET_AMT ~., data = select(insurance.train, -c("INDEX", "TARGET_FLAG")))
 tbl_regression(GLM.model1) %>% add_glance_table()
 
@@ -143,7 +143,7 @@ tbl_regression(GLM.model1) %>% add_glance_table()
 The R2 here isn't the best fit--only 7% of the variance is explained. We can use a simple method and select features of interest based on statistical significance; we can use a p-threshold of less than 0.1 to start:
 
 ## Model 2: LM with selected features
-```{r}
+```{r, echo=FALSE}
 
 GLM.model2 = lm(TARGET_AMT ~ SEX + JOB + BLUEBOOK + EDUCATION + CAR_TYPE +  CLM_FREQ + REVOKED + MVR_PTS + CAR_AGE ,  select(insurance.train, -c("INDEX", "TARGET_FLAG")))
 tbl_regression(GLM.model2) %>% add_glance_table()
@@ -155,7 +155,7 @@ The R2 takes a hit (0.07 to 0.04), but this might a better model: more observati
 
 We know from previous plots that the target amount is heavily skewed right. Therefore, we can log-transform it and normalize the outcome:
 
-```{r}
+```{r, echo=FALSE}
 
 insurance.train = insurance.train %>% mutate(logTARGET_AMT = log(TARGET_AMT + 1e-06))
 vec.cols.model3 = c("SEX", "BLUEBOOK", "EDUCATION", "CAR_TYPE", "REVOKED", "MVR_PTS", "CAR_AGE")
@@ -170,7 +170,7 @@ The R-squared here goes up to 0.1, but the intercept is significant, hinting tha
 
 One last approach we can take is using cross-validation to create multiple folds and partition the dataset while training:
 
-```{r}
+```{r, echo=FALSE}
 library(caret)
 
 insurance.train.complete = insurance.train %>% select(-c("TARGET_AMT", "TARGET_FLAG")) %>%  na.omit()
@@ -190,13 +190,13 @@ The R-Squared here is 0.1, but it might perform better due to cross-validation.
 
 ## Evaluating Linear Regression Models
 
-```{r}
+```{r, echo=FALSE}
 insurance.eval = insurance.all %>% filter(dataset == "eval") %>% select(-"dataset")
 
 eval.model1.glm = predict(GLM.model1)
 eval.model2.glm = predict(GLM.model2, select(insurance.eval, -"TARGET_AMT"))
-eval.model3.glm = 10**predict(GLM.model3, select(insurance.eval, -"TARGET_AMT"))
-eval.model4.glm = 10**predict(cv_fit, newdata = select(insurance.eval, -"TARGET_AMT"))
+eval.model3.glm = 10^predict(GLM.model3, select(insurance.eval, -"TARGET_AMT"))
+eval.model4.glm = 10^predict(cv_fit, newdata = select(insurance.eval, -"TARGET_AMT"))
 
 model_predictions = rbind(data.frame(name = "Model1", predict = eval.model1.glm),
 data.frame(name = "Model2", predict = eval.model2.glm),
@@ -222,7 +222,7 @@ We are building model that can predict the probability that a person will crash 
 
 We theorize that these variables are positively related to the driver's personal accountability. In other words, a driver who positively associated with these variables is theorized to be more prone to crashing their car.
 
-```{r}
+```{r, echo=FALSE}
 train.df <- insurance.train %>% select(-c("TARGET_AMT", "INDEX", "logTARGET_AMT"))
 mlda <- lda(TARGET_FLAG ~ AGE + CLM_FREQ +JOB+ REVOKED+MVR_PTS + MSTATUS + CAR_TYPE , data=train.df)
 
@@ -230,7 +230,7 @@ lda_predict <- predict(mlda, newdata=select(train.df, -"TARGET_FLAG"))$class
 table(lda_predict, train.df[,1])
 ```
 
-```{r}
+```{r, echo=FALSE}
 conf <- table(list(predicted=lda_predict, observed=train.df[,1]))
 confusionMatrix(conf,,mode="everything")
 ```
@@ -239,7 +239,7 @@ confusionMatrix(conf,,mode="everything")
 
 we first check how effective a logistic regression is including all variables to see what direction to go and what variables to remove.
 
-```{r}
+```{r, echo=FALSE}
 mlog <- glm(TARGET_FLAG ~ ., family="binomial", data=train.df)
 
 predict_mlog <- round(predict(mlog, train.df, type="response"))
@@ -255,7 +255,7 @@ conf_mlog
  
 this model takes model six and restricts the variables to try and improve upon the general binomial regression. 
  
-```{r}
+```{r, echo=FALSE}
 Binary_Model8 = glm(TARGET_FLAG ~ AGE +
                   CAR_AGE +
                   MVR_PTS +
@@ -285,18 +285,26 @@ Like in our linear models it was a bit difficult to get a good working model for
 
 ## generating prediction DF
 
-```{r}
+```{r, echo=FALSE}
+#insurance.test
+insurance.test = insurance.test %>% select(-c("TARGET_AMT", "TARGET_FLAG")) %>%  na.omit()
+
+insurance.test$predicted_flag<- round(predict(mlog, insurance.test, type="response"))
+insurance.test$predicted_amnt<-10**(predict(cv_fit, newdata=insurance.test))
+#predicted_amnt<-predicted_amnt
+
 insurance.test
-#insurance.test$predicted_flag<- predict(mlog, insurance.test, type="response")
-#insurance.test$predicted_amnt<-10^predict(cv_fit, newdata=insurance.test)
 write_csv(insurance.test,"HW4_predictions.csv")
+#pred=data.frame(predicted_flag)
+#length(predicted_amnt)
+
 ```
 
 
 # Appendix -----
 
 
-```{r, eval = F, echo = T}
+```{r, echo = T}
 ## ----setup, include=FALSE---------------------------------------------------------------------------------------
 knitr::opts_chunk$set(echo = F, warning = F, message = F)
 
@@ -431,4 +439,54 @@ data.frame(name = "CV", predict = eval.model4.glm))
 
 
 ggplot(aes(x = predict), data = model_predictions) + geom_histogram() + facet_wrap(~name) + labs(x = "Income", y = "Count", title = "Predicted Values")
+## ---------------------------------------------------------------------------------------------------------------
+
+train.df <- insurance.train %>% select(-c("TARGET_AMT", "INDEX", "logTARGET_AMT"))
+mlda <- lda(TARGET_FLAG ~ AGE + CLM_FREQ +JOB+ REVOKED+MVR_PTS + MSTATUS + CAR_TYPE , data=train.df)
+
+lda_predict <- predict(mlda, newdata=select(train.df, -"TARGET_FLAG"))$class
+table(lda_predict, train.df[,1])
+## ---------------------------------------------------------------------------------------------------------------
+
+conf <- table(list(predicted=lda_predict, observed=train.df[,1]))
+confusionMatrix(conf,,mode="everything")
+## ---------------------------------------------------------------------------------------------------------------
+
+mlog <- glm(TARGET_FLAG ~ ., family="binomial", data=train.df)
+
+predict_mlog <- round(predict(mlog, train.df, type="response"))
+
+conf_mlog <- confusionMatrix(data=as.factor(predict_mlog),reference=as.factor(train.df$TARGET_FLAG),mode="everything")
+
+conf_mlog
+
+## ---------------------------------------------------------------------------------------------------------------
+
+Binary_Model8 = glm(TARGET_FLAG ~ AGE +
+                  CAR_AGE +
+                  MVR_PTS +
+                  YOJ +
+                  CLM_FREQ +
+                  TIF, family = "binomial", data = train.df)
+#summary(Binary_Model8)
+
+predict_model8 <- round(predict(Binary_Model8, train.df, type="response"))
+
+conf_mod_8 <- confusionMatrix(data=as.factor(predict_model8),reference=as.factor(train.df$TARGET_FLAG),mode="everything")
+
+conf_mod_8
+## ---------------------------------------------------------------------------------------------------------------
+
+insurance.test = insurance.test %>% select(-c("TARGET_AMT", "TARGET_FLAG")) %>%  na.omit()
+
+insurance.test$predicted_flag<- round(predict(mlog, insurance.test, type="response"))
+insurance.test$predicted_amnt<-10**(predict(cv_fit, newdata=insurance.test))
+#predicted_amnt<-predicted_amnt
+
+insurance.test
+write_csv(insurance.test,"HW4_predictions.csv")
+#pred=data.frame(predicted_flag)
+#length(predicted_amnt)
+
 ```
+
